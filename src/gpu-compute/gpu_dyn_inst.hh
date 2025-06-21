@@ -160,6 +160,7 @@ class GPUDynInst : public GPUExecContext
 
     InstSeqNum seqNum() const;
 
+    Addr dyn_pc;
     Addr pc();
     void pc(Addr _pc);
 
@@ -484,6 +485,24 @@ class GPUDynInst : public GPUExecContext
 
     bool isSystemReq() { return systemReq; }
     void setSystemReq() { systemReq = true; }
+
+  public:
+    /** Tick records used for the pipeline activity viewer. */
+    Tick fetchTick = -1;     
+    Tick decodeTick = -1;  
+    Tick scoreboardTick = -1;  
+    Tick scheduleTick = -1;
+    Tick exeTick = -1;
+    Tick maccTick = -1;
+    Tick sTlbreturnTick = -1;
+    Tick reqScacheTick = -1;
+    Tick ScacheRespTick = -1;
+    std::vector<std::pair<Addr, Tick>> dTlbreturnTicks;
+    std::vector<std::pair<Addr, Tick>> reqTcpTicks;
+    std::vector<std::pair<Addr, Tick>> TcpRespTicks;
+    std::vector<std::pair<Addr, Tick>> TcpRespStoreTicks;
+    Tick mcTick = -1;
+
 
   private:
     GPUStaticInst *_staticInst;

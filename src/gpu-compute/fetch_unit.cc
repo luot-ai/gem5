@@ -37,6 +37,7 @@
 #include "debug/GPUFetch.hh"
 #include "debug/GPUPort.hh"
 #include "debug/GPUTLB.hh"
+#include "debug/GPUView.hh"
 #include "gpu-compute/compute_unit.hh"
 #include "gpu-compute/gpu_dyn_inst.hh"
 #include "gpu-compute/gpu_static_inst.hh"
@@ -162,6 +163,11 @@ FetchUnit::initiateFetch(Wavefront *wavefront)
     DPRINTF(GPUTLB, "CU%d: WF[%d][%d]: Initiating fetch translation: %#x\n",
             computeUnit.cu_id, wavefront->simdId, wavefront->wfSlotId, vaddr);
 
+    if (debug::GPUView) {
+            DPRINTFR(GPUView, "%llu: CU%d: WF[%d][%d]: Id%d: Initiate fetch "
+            "from pc: %d, tlb translation for cache line addr: %#x\n", curTick(), computeUnit.cu_id, wavefront->simdId,
+            wavefront->wfSlotId, wavefront->wfDynId, wavefront->pc(), vaddr);
+        }
     // set up virtual request
     RequestPtr req = std::make_shared<Request>(
         vaddr, computeUnit.cacheLineSize(), Request::INST_FETCH,
@@ -236,6 +242,7 @@ FetchUnit::fetch(PacketPtr pkt, Wavefront *wavefront)
     DPRINTF(GPUFetch, "CU%d: WF[%d][%d]: Fetch Access: %#x\n",
             computeUnit.cu_id, wavefront->simdId, wavefront->wfSlotId,
             pkt->req->getPaddr());
+
 
     /**
      * this is necessary because the GPU TLB receives packets instead of
@@ -599,10 +606,11 @@ FetchUnit::FetchBufDesc::decodeInsts()
                                                wavefront->computeUnit->
                                                 getAndIncSeqNum());
             wavefront->instructionBuffer.push_back(gpu_dyn_inst);
-
-            DPRINTF(GPUFetch, "WF[%d][%d]: Id%ld decoded %s (%d bytes). "
+            gpu_dyn_inst->decodeTick = curTick();
+            DPRINTF(GPUFetch, "WF[%d][%d]: Id%ld decoded %d: %s (%d bytes). "
                     "%d bytes remain.\n", wavefront->simdId,
                     wavefront->wfSlotId, wavefront->wfDynId,
+                    gpu_dyn_inst->seqNum(),
                     gpu_static_inst->disassemble(),
                     gpu_static_inst->instSize(),
                     fetchBytesRemaining());
@@ -638,6 +646,7 @@ FetchUnit::FetchBufDesc::decodeSplitInst()
                                        wavefront, gpu_static_inst,
                                        wavefront->computeUnit->
                                            getAndIncSeqNum());
+    gpu_dyn_inst->decodeTick = curTick();
     wavefront->instructionBuffer.push_back(gpu_dyn_inst);
 
     DPRINTF(GPUFetch, "WF[%d][%d]: Id%d decoded split inst %s (%#x) "

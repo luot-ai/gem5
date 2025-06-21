@@ -36,6 +36,7 @@
 #include "debug/GPUInitAbi.hh"
 #include "debug/GPUTrace.hh"
 #include "debug/WavefrontStack.hh"
+#include "debug/GPUView.hh"
 #include "gpu-compute/compute_unit.hh"
 #include "gpu-compute/gpu_dyn_inst.hh"
 #include "gpu-compute/register_file_cache.hh"
@@ -975,6 +976,23 @@ Wavefront::exec()
     DPRINTF(GPUTrace, "CU%d: WF[%d][%d]: wave[%d] Executing inst: %s "
             "(pc: %#x; seqNum: %d)\n", computeUnit->cu_id, simdId, wfSlotId,
             wfDynId, ii->disassemble(), old_pc, ii->seqNum());
+
+    ii->dyn_pc = old_pc;
+    if (debug::GPUView) 
+    {
+        ii->exeTick = curTick();
+        if(!ii->isMemRef())
+        {
+            DPRINTF(GPUView, "CU%d: WF[%d][%d]: wave[%d] Executing inst: %s "
+                             "(pc: %#x; seqNum: %d)\n",
+                    computeUnit->cu_id, simdId, wfSlotId,
+                    wfDynId, ii->disassemble(), old_pc, ii->seqNum());
+            DPRINTFR(GPUView, "GPUView:decode:%llu\n", ii->decodeTick);
+            DPRINTFR(GPUView, "GPUView:scb:%llu\n", ii->scoreboardTick);
+            DPRINTFR(GPUView, "GPUView:sch:%llu\n", ii->scheduleTick);
+            DPRINTFR(GPUView, "GPUView:issue:%llu\n", curTick());
+        }
+    }
 
     ii->execute(ii);
     // delete the dynamic instruction from the pipeline map

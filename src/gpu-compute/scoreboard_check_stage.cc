@@ -290,6 +290,7 @@ ScoreboardCheckStage::exec()
             if (ready(curWave, &rdyStatus, &exeResType, wfSlot)) {
                 curWave->lastInstRdyStatus = rdyStatusStr(rdyStatus);
                 assert(curWave->simdId == simdId);
+                if(curWave->nextInstr()->scoreboardTick == -1){curWave->nextInstr()->scoreboardTick = curTick();}//first time
                 DPRINTF(GPUSched,
                         "Adding to readyList[%d]: SIMD[%d] WV[%d]: %d: %s\n",
                         exeResType,

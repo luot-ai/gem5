@@ -104,7 +104,7 @@ ScheduleStage::exec()
              wIt != fromScoreboardCheck.readyWFs(j).end();) {
             if (wavesInSch.find((*wIt)->wfDynId) != wavesInSch.end()) {
                 *wIt = nullptr;
-                wIt = fromScoreboardCheck.readyWFs(j).erase(wIt);
+                wIt = fromScoreboardCheck.readyWFs(j).erase(wIt);  //0604:scb stall because wave is doing
             } else {
                 wIt++;
             }
@@ -319,7 +319,7 @@ ScheduleStage::addToSchList(int exeType, const GPUDynInstPtr &gpu_dyn_inst)
         DPRINTF(GPUSched, "schList[%d]: Adding: SIMD[%d] WV[%d]: %d: %s\n",
                 exeType, wf->simdId, wf->wfDynId,
                 gpu_dyn_inst->seqNum(), gpu_dyn_inst->disassemble());
-
+        gpu_dyn_inst->scheduleTick = curTick();
         computeUnit.insertInPipeMap(wf);
         wavesInSch.emplace(wf->wfDynId);
         schList.at(exeType).push_back(std::make_pair(gpu_dyn_inst, RFBUSY));

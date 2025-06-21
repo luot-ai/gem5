@@ -46,6 +46,7 @@
 #include "debug/GPURename.hh"
 #include "debug/GPUSync.hh"
 #include "debug/GPUTLB.hh"
+#include "debug/GPUView.hh"
 #include "debug/GPUTrace.hh"
 #include "enums/GfxVersion.hh"
 #include "gpu-compute/dispatcher.hh"
@@ -59,6 +60,7 @@
 #include "gpu-compute/vector_register_file.hh"
 #include "gpu-compute/wavefront.hh"
 #include "mem/page_table.hh"
+#include "mem/ruby/system/RubySystem.hh"
 #include "sim/process.hh"
 #include "sim/sim_exit.hh"
 
@@ -1045,6 +1047,19 @@ ComputeUnit::DataPort::handleResponse(PacketPtr pkt)
             computeUnit->cu_id, gpuDynInst->simdId, gpuDynInst->wfSlotId,
             gpuDynInst->seqNum(), index, pkt->req->getPaddr());
 
+    if (debug::GPUView) {
+        Addr lineAddr =ruby::makeLineAddress(pkt->req->getPaddr(),computeUnit->getCacheLineBits());
+        if (pkt->cmd == MemCmd::WriteCompleteResp)
+        {
+            if (gpuDynInst->TcpRespStoreTicks.empty() || lineAddr != gpuDynInst->TcpRespStoreTicks.back().first) {
+            gpuDynInst->TcpRespStoreTicks.push_back(std::make_pair(lineAddr, curTick()));
+            }
+        }
+        else if (gpuDynInst->TcpRespTicks.empty() || lineAddr != gpuDynInst->TcpRespTicks.back().first) {
+        gpuDynInst->TcpRespTicks.push_back(std::make_pair(lineAddr, curTick()));
+        }
+    }
+
     computeUnit->schedule(mem_resp_event,
                           curTick() + computeUnit->resp_tick_latency);
 
@@ -1087,6 +1102,11 @@ ComputeUnit::ScalarDataPort::handleResponse(PacketPtr pkt)
      * once all packets return, the memory op is finished
      * and we can push it into the response queue.
      */
+    //TODO:numScalarReqs
+    if (debug::GPUView) {
+        gpuDynInst->ScacheRespTick = curTick();
+        //DPRINTF(GPUView, "GPUView:sCacheResp:%llu(seqNum: %d),left reqs:%d\n", curTick(), gpuDynInst->seqNum(),gpuDynInst->numScalarReqs);
+    }
     if (!gpuDynInst->numScalarReqs) {
         if (gpuDynInst->isLoad() || gpuDynInst->isAtomic()) {
                 computeUnit->scalarMemoryPipe.getGMLdRespFIFO().push(
@@ -1815,6 +1835,14 @@ ComputeUnit::DTLBPort::recvTimingResp(PacketPtr pkt)
             computeUnit->cu_id, gpuDynInst->simdId,
             gpuDynInst->wfSlotId, mp_index, new_pkt->req->getPaddr());
 
+
+    if (debug::GPUView) {
+        Addr lineAddr =ruby::makeLineAddress(new_pkt->req->getPaddr(),computeUnit->getCacheLineBits());
+        if (gpuDynInst->dTlbreturnTicks.empty() || lineAddr != gpuDynInst->dTlbreturnTicks.back().first)
+        {
+            gpuDynInst->dTlbreturnTicks.push_back(std::make_pair(lineAddr, curTick()));
+        }
+    }
     computeUnit->schedule(mem_req_event, curTick() +
                           computeUnit->req_tick_latency);
 
@@ -1848,6 +1876,12 @@ ComputeUnit::DataPort::processMemReqEvent(PacketPtr pkt)
         assert(compute_unit->shader->systemHub);
         SystemHubEvent *resp_event = new SystemHubEvent(pkt, this);
         compute_unit->shader->systemHub->sendRequest(pkt, resp_event);
+        if (gpuDynInst) {
+            DPRINTF(GPUView,
+                    "CU%d: WF[%d][%d]: gpuDynInst: %d is sysReq!\n",
+                    compute_unit->cu_id, gpuDynInst->simdId,
+                    gpuDynInst->wfSlotId,gpuDynInst->seqNum());
+        }
     } else if (!(sendTimingReq(pkt))) {
         retries.emplace_back(pkt, gpuDynInst);
 
@@ -1881,6 +1915,10 @@ ComputeUnit::ScalarDataPort::MemReqEvent::process()
     GPUDynInstPtr gpuDynInst = sender_state->_gpuDynInst;
     [[maybe_unused]] ComputeUnit *compute_unit = scalarDataPort.computeUnit;
 
+        //TODO:不一定成功
+        if (debug::GPUView) {
+            gpuDynInst->reqScacheTick = curTick();
+        }
     if (pkt->req->systemReq()) {
         assert(compute_unit->shader->systemHub);
         SystemHubEvent *resp_event = new SystemHubEvent(pkt, &scalarDataPort);
@@ -2005,6 +2043,10 @@ ComputeUnit::ScalarDTLBPort::recvTimingResp(PacketPtr pkt)
                 (computeUnit->scalarDataPort, req_pkt);
     computeUnit->schedule(scalar_mem_req_event, curTick() +
                           computeUnit->scalar_req_tick_latency);
+
+        if (debug::GPUView) {
+            gpuDynInst->sTlbreturnTick = curTick();
+        }
 
     return true;
 }

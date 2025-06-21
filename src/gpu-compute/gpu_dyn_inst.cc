@@ -31,6 +31,7 @@
 
 #include "gpu-compute/gpu_dyn_inst.hh"
 
+#include "debug/GPUView.hh"
 #include "debug/GPUInst.hh"
 #include "debug/GPUMem.hh"
 #include "gpu-compute/gpu_static_inst.hh"
@@ -91,6 +92,27 @@ GPUDynInst::GPUDynInst(ComputeUnit *_cu, Wavefront *_wf,
 
     _staticInst->initDynOperandInfo(wavefront(), computeUnit());
 
+}
+
+void printVector1(const std::string& prefix, const std::vector<Tick>& vec) {
+    if (vec.empty()) {
+        return;
+    }
+    for (size_t i = 0; i < vec.size(); ++i) {
+        if (vec[i] != vec[i-1] )
+        {
+            DPRINTF(GPUView, "%s:%llu\n", prefix.c_str(), vec[i]);
+        }
+    }
+}
+
+void printVector2(const std::string& prefix, const std::vector<std::pair<Addr, Tick>>& vec) {
+    if (vec.empty()) {
+        return;
+    }
+    for (size_t i = 0; i < vec.size(); ++i) {
+        DPRINTF(GPUView, "%s:%llu:%#x\n", prefix.c_str(), vec[i].second, vec[i].first );
+    }
 }
 
 GPUDynInst::~GPUDynInst()
@@ -306,6 +328,9 @@ GPUDynInst::initiateAcc(GPUDynInstPtr gpuDynInst)
 {
     DPRINTF(GPUMem, "CU%d: WF[%d][%d]: mempacket status bitvector=%#x\n",
             cu->cu_id, simdId, wfSlotId, exec_mask);
+    if (debug::GPUView) {
+        gpuDynInst->maccTick = curTick();
+    }
 
     _staticInst->initiateAcc(gpuDynInst);
 }
@@ -317,6 +342,33 @@ GPUDynInst::completeAcc(GPUDynInstPtr gpuDynInst)
             "%#x complete\n",
             cu->cu_id, simdId, wfSlotId, exec_mask);
 
+    if (debug::GPUView) {
+        gpuDynInst->mcTick = curTick();
+
+        DPRINTF(GPUView, "CU%d: WF[%d][%d]: wave[%d] Executing inst: %s "
+                         "(pc: %#x; seqNum: %d)\n",
+                cu->cu_id, simdId, wfSlotId,
+                wfDynId, gpuDynInst->disassemble(), gpuDynInst->dyn_pc, seqNum());
+        DPRINTF(GPUView, "GPUView:decode:%llu\n", gpuDynInst->decodeTick);
+        DPRINTF(GPUView, "GPUView:scb:%llu\n", gpuDynInst->scoreboardTick);
+        DPRINTF(GPUView, "GPUView:sch:%llu\n", gpuDynInst->scheduleTick);
+        DPRINTF(GPUView, "GPUView:issue:%llu\n", gpuDynInst->exeTick);
+        DPRINTF(GPUView, "GPUView:macc:%llu\n", gpuDynInst->maccTick);
+        if (isScalar())
+        {
+            DPRINTF(GPUView, "GPUView:stlbReturn:%llu\n", gpuDynInst->sTlbreturnTick);
+            DPRINTF(GPUView, "GPUView:reqScache:%llu\n", gpuDynInst->reqScacheTick);
+            DPRINTF(GPUView, "GPUView:ScacheResp:%llu\n", gpuDynInst->ScacheRespTick);
+        }
+        else
+        {
+            printVector2("GPUView:dtlbReturn", dTlbreturnTicks);
+            printVector2("GPUView:reqTcp", reqTcpTicks);
+            printVector2("GPUView:tcpResp", TcpRespTicks);
+            printVector2("GPUView:tcpRespStore", TcpRespStoreTicks);
+        }
+        DPRINTF(GPUView, "GPUView:mc:%llu, memType:%d, time:%llu\n", mcTick,gpuDynInst->executedAs(),gpuDynInst->time);
+    }
     _staticInst->completeAcc(gpuDynInst);
 }
 
