@@ -8,7 +8,7 @@ CXXFLAGS += -I\$(GEM5_PATH)/util/m5/src
 LDFLAGS  += -I$(GEM5_PATH)/util/m5/build/x86/out -lm5
 
 EXECUTABLE = square.default
-CPPSRC = square-1.cpp
+CPPSRC = square1.cpp
 
 
 OPTS = -O3 -Wno-unused-result
@@ -20,7 +20,7 @@ square: $(BIN_DIR)/$(EXECUTABLE)
 
 $(BIN_DIR)/$(EXECUTABLE): $(CPPSRC) $(BIN_DIR)
 	$(HIPCC) $(OPTS) --offload-arch=gfx942 --save-temps -fgpu-rdc $(CXXFLAGS) $(CPPSRC) -o $(BIN_DIR)/$(EXECUTABLE)
-	@mv *.o *.hipfb *.mcin *.s *.bc *.txt *.hipi *.mcin $(BIN_DIR)/
+	@mv *.o *.hipfb *.mcin *.s *.bc *.txt *.hipi $(BIN_DIR)/
 	@mv a.out-hip-amdgcn-amd-amdhsa-gfx942 $(BIN_DIR)/
 
 asm: $(ASM_FILE)

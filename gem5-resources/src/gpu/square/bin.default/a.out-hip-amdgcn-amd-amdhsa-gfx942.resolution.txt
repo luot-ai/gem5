@@ -1,0 +1,8 @@
+square1-hip-amdgcn-amd-amdhsa-gfx942.bc
+-r=square1-hip-amdgcn-amd-amdhsa-gfx942.bc,__cxa_pure_virtual,px
+-r=square1-hip-amdgcn-amd-amdhsa-gfx942.bc,__cxa_deleted_virtual,px
+-r=square1-hip-amdgcn-amd-amdhsa-gfx942.bc,__assert_fail,pl
+-r=square1-hip-amdgcn-amd-amdhsa-gfx942.bc,__assertfail,pl
+-r=square1-hip-amdgcn-amd-amdhsa-gfx942.bc,_Z13vector_squareIfEvPT_PKS0_m,plx
+-r=square1-hip-amdgcn-amd-amdhsa-gfx942.bc,__hip_cuid_8e4ad2cb2993f7,px
+-r=square1-hip-amdgcn-amd-amdhsa-gfx942.bc,__oclc_ABI_version,pl

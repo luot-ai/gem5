@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "hip/hip_runtime.h"
-#include "gem5/m5ops.h"
-#include <m5_mmap>
+// #include "gem5/m5ops.h"
+// #include <m5_mmap>
 
 #define CHECK(cmd) \
 {\
@@ -44,8 +44,8 @@ int main(int argc, char *argv[])
 
     size_t N = 1000000;
     size_t Nbytes = N * sizeof(float);
-    m5op_addr = 0xFFFF0000;
-    map_m5_mem();
+    // m5op_addr = 0xFFFF0000;
+    // map_m5_mem();
 
     hipDeviceProp_t props;
     CHECK(hipGetDeviceProperties(&props, 0));
@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
     CHECK(hipMalloc(&C_d, Nbytes));
     CHECK(hipMemcpy(A_d, A_h, Nbytes, hipMemcpyHostToDevice));
 
-    m5_checkpoint_addr();
+    // m5_checkpoint_addr();
     const unsigned blocks = 512;
     const unsigned threadsPerBlock = 256;
     size_t shmem_size = threadsPerBlock * sizeof(float); // per block shared mem
